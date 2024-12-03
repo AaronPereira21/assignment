@@ -1,122 +1,131 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import './App.css';
 
-const App = () => {
-  const [formType, setFormType] = useState("");
+function App() {
+  const [formType, setFormType] = useState('');
   const [formFields, setFormFields] = useState([]);
   const [formData, setFormData] = useState({});
+  const [submittedData, setSubmittedData] = useState([]);
   const [progress, setProgress] = useState(0);
-  const [error, setError] = useState("");
-  const [submittedData, setSubmittedData] = useState(null); // To store submitted data
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
-  // Hardcoded API responses for different form types
-  const apiResponses = {
-    "User Information": {
-      fields: [
-        { name: "firstName", type: "text", label: "First Name", required: true },
-        { name: "lastName", type: "text", label: "Last Name", required: true },
-        { name: "age", type: "number", label: "Age", required: false }
-      ]
-    },
-    "Address Information": {
-      fields: [
-        { name: "street", type: "text", label: "Street", required: true },
-        { name: "city", type: "text", label: "City", required: true },
-        { name: "state", type: "dropdown", label: "State", options: ["Maharashtra", "Karnataka", "Tamil Nadu","Delhi","Haryana","Kerala","Telangana"], required: true },
-        { name: "PinCode", type: "text", label: "Pin Code", required: false }
-      ]
-    },
-    "Payment Information": {
-      fields: [
-        { name: "cardNumber", type: "text", label: "Card Number", required: true },
-        { name: "expiryDate", type: "date", label: "Expiry Date", required: true },
-        { name: "cvv", type: "password", label: "CVV", required: true },
-        { name: "cardholderName", type: "text", label: "Cardholder Name", required: true }
-      ]
-    }
+  const handleFormTypeChange = (e) => {
+    setFormType(e.target.value);
   };
 
   useEffect(() => {
     if (formType) {
-      setFormFields(apiResponses[formType].fields);
+      // Simulate API response based on form type
+      const fetchFormFields = async () => {
+        try {
+          let response;
+          if (formType === 'User Information') {
+            response = {
+              fields: [
+                { name: 'firstName', type: 'text', label: 'First Name', required: true },
+                { name: 'lastName', type: 'text', label: 'Last Name', required: true },
+                { name: 'age', type: 'number', label: 'Age', required: false },
+              ],
+            };
+          } else if (formType === 'Address Information') {
+            response = {
+              fields: [
+                { name: 'street', type: 'text', label: 'Street', required: true },
+                { name: 'city', type: 'text', label: 'City', required: true },
+                { name: 'state', type: 'dropdown', label: 'State', options: ['Maharashtra', 'Karnataka', 'Telangana','Tamil Nadu'], required: true },
+                { name: 'pinCode', type: 'text', label: 'Pin Code', required: false },
+              ],
+            };
+          } else if (formType === 'Payment Information') {
+            response = {
+              fields: [
+                { name: 'cardNumber', type: 'text', label: 'Card Number', required: true },
+                { name: 'expiryDate', type: 'date', label: 'Expiry Date', required: true },
+                { name: 'cvv', type: 'password', label: 'CVV', required: true },
+                { name: 'cardholderName', type: 'text', label: 'Cardholder Name', required: true },
+              ],
+            };
+          }
+
+          setFormFields(response.fields);
+          setFormData({});
+          setProgress(0);
+          setErrorMessage('');
+          setSuccessMessage('');
+        } catch (error) {
+          setErrorMessage('Failed to load form fields. Please try again.');
+        }
+      };
+
+      fetchFormFields();
     }
   }, [formType]);
 
-  // Handle input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
+    setFormData((prev) => {
+      const newFormData = { ...prev, [name]: value };
+      calculateProgress(newFormData);
+      return newFormData;
     });
   };
 
-  // Handle form submission
+  const calculateProgress = (data) => {
+    const totalFields = formFields.length;
+    const filledFields = formFields.filter((field) => field.required && data[field.name]).length;
+    setProgress((filledFields / totalFields) * 100);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    let formValid = true;
-    let formError = "";
 
     // Validate required fields
-    formFields.forEach((field) => {
-      if (field.required && !formData[field.name]) {
-        formValid = false;
-        formError = `Please fill out the ${field.label}`;
-      }
-    });
-
-    if (formValid) {
-      setSubmittedData(formData); // Store the submitted data
-      setProgress(100);
-      setFormData({});
-    } else {
-      setError(formError);
+    const missingFields = formFields.filter((field) => field.required && !formData[field.name]);
+    if (missingFields.length > 0) {
+      setErrorMessage('Please fill in all required fields.');
+      return;
     }
-  };
 
-  // Handle form type change
-  const handleFormTypeChange = (e) => {
-    setFormType(e.target.value);
+    setSubmittedData((prev) => [...prev, formData]);
+    setSuccessMessage('Form submitted successfully!');
     setFormData({});
-    setError("");
     setProgress(0);
-    setSubmittedData(null); // Reset submitted data when form type is changed
   };
 
-  // Calculate progress
-  useEffect(() => {
-    const filledFields = Object.values(formData).filter((value) => value !== "");
-    setProgress((filledFields.length / formFields.length) * 100);
-  }, [formData, formFields]);
+  const handleDelete = (index) => {
+    setSubmittedData((prev) => prev.filter((_, i) => i !== index));
+    setSuccessMessage('Entry deleted successfully.');
+  };
+
+  const handleEdit = (index) => {
+    setFormData(submittedData[index]);
+    setSubmittedData((prev) => prev.filter((_, i) => i !== index));
+  };
 
   return (
-    <div>
-      <nav>
-        <h1>Assignment Form</h1>
-      </nav>
+    <div className="app-container">
+      <header className="header">
+        <h1>Dynamic Form Application</h1>
+      </header>
 
-      <main>
-        <h2>Fill Out the Form</h2>
-
-        <div className="form-selector">
-          <label htmlFor="formType">Select Form Type:</label>
-          <select id="formType" value={formType} onChange={handleFormTypeChange}>
-            <option value="">Select...</option>
-            <option value="User Information">User Information</option>
-            <option value="Address Information">Address Information</option>
-            <option value="Payment Information">Payment Information</option>
-          </select>
-        </div>
+      <div className="form-container">
+        <select onChange={handleFormTypeChange} value={formType}>
+          <option value="">Select Form Type</option>
+          <option value="User Information">User Information</option>
+          <option value="Address Information">Address Information</option>
+          <option value="Payment Information">Payment Information</option>
+        </select>
 
         {formType && (
           <form onSubmit={handleSubmit}>
             {formFields.map((field) => (
-              <div className="form-field" key={field.name}>
+              <div key={field.name} className="form-group">
                 <label>{field.label}</label>
-                {field.type === "dropdown" ? (
+                {field.type === 'dropdown' ? (
                   <select
                     name={field.name}
-                    value={formData[field.name] || ""}
+                    value={formData[field.name] || ''}
                     onChange={handleInputChange}
                   >
                     {field.options.map((option) => (
@@ -129,38 +138,62 @@ const App = () => {
                   <input
                     type={field.type}
                     name={field.name}
-                    value={formData[field.name] || ""}
+                    value={formData[field.name] || ''}
                     onChange={handleInputChange}
+                    required={field.required}
                   />
                 )}
-                {error && error.includes(field.label) && <div className="error">{error}</div>}
+                {field.required && !formData[field.name] && (
+                  <span className="error">This field is required</span>
+                )}
               </div>
             ))}
 
             <button type="submit">Submit</button>
+            {errorMessage && <div className="error-message">{errorMessage}</div>}
+            {successMessage && <div className="success-message">{successMessage}</div>}
           </form>
         )}
 
-        {formType && (
-          <div className="progress-bar">
-            <progress value={progress} max="100"></progress>
-            <p>{Math.round(progress)}% Completed</p>
-          </div>
-        )}
+        <div className="progress-container">
+          <progress value={progress} max={100}></progress>
+        </div>
+      </div>
 
-        {submittedData && (
-          <div className="submitted-data">
-            <h3>Submitted Information</h3>
-            <pre>{JSON.stringify(submittedData, null, 2)}</pre>
-          </div>
-        )}
-      </main>
+      {submittedData.length > 0 && (
+        <div className="submitted-data">
+          <h2>Submitted Data</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Form Data</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {submittedData.map((data, index) => (
+                <tr key={index}>
+                  <td>
+                    {Object.entries(data)
+                      .map(([key, value]) => `${key}: ${value}`)
+                      .join(', ')}
+                  </td>
+                  <td>
+                    <button onClick={() => handleEdit(index)}>Edit</button>
+                    <button onClick={() => handleDelete(index)}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-      <footer>
-        <p>&copy; 2024 Dynamic Form. All Rights Reserved.</p>
+      <footer className="footer">
+        <p>Dynamic Form Application - 2024</p>
       </footer>
     </div>
   );
-};
+}
 
 export default App;
